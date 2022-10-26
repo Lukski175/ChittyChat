@@ -39,6 +39,7 @@ var wg sync.WaitGroup
 
 func (s server) Stream(srv pb.MessageStream_StreamServer) error {
 	wg.Add(1)
+	clients++
 
 	resp, err := srv.Recv()
 	if err != nil {
@@ -50,7 +51,7 @@ func (s server) Stream(srv pb.MessageStream_StreamServer) error {
 
 	clientName := resp.Message
 	message = pb.MessageReply{Message: clientName + " Joined", IsBroadcast: true}
-	clientStreams = append(clientStreams, srv)
+	clientStreams[clients] = srv
 
 	go SendMessageToClients(&message)
 	go ReceiveLoop(srv, clientName)
@@ -59,16 +60,19 @@ func (s server) Stream(srv pb.MessageStream_StreamServer) error {
 	return nil
 }
 
-var clientStreams []pb.MessageStream_StreamServer
+var clientStreams = make(map[int]pb.MessageStream_StreamServer)
+var clients int
 var message pb.MessageReply
 var lampClock int32
 
 func ReceiveLoop(stream pb.MessageStream_StreamServer, clientName string) {
+	clientID := clients
 	for {
 		resp, err := stream.Recv()
 
 		if err != nil {
 			lampClock++ //Disconnect is an event
+			delete(clientStreams, clientID)
 			message = pb.MessageReply{Message: clientName + " Disconnected", IsBroadcast: true}
 			go SendMessageToClients(&message)
 			break
@@ -89,6 +93,9 @@ func SendMessageToClients(msg *pb.MessageReply) {
 	lampClock++
 	for _, stream := range clientStreams {
 		msg.Clock = lampClock
-		stream.Send(msg)
+		err := stream.Send(msg)
+		if err != nil {
+			log.Printf("%v", err)
+		}
 	}
 }

@@ -37,7 +37,10 @@ func main() {
 		log.Fatalf("open stream error %v", err)
 	}
 	lampClock++ //Joining is an event
-	stream.Send(&pb.MessageRequest{Message: clientName, Clock: lampClock})
+	err = stream.Send(&pb.MessageRequest{Message: clientName, Clock: lampClock})
+	if err != nil {
+		log.Printf("%v", err)
+	}
 
 	go SendLoop(stream)
 
@@ -69,7 +72,10 @@ func SendLoop(stream pb.MessageStream_StreamClient) {
 		reader.Scan()
 		if reader.Text() != "" {
 			lampClock++ //Sending is an event
-			stream.Send(&pb.MessageRequest{Message: reader.Text(), Clock: lampClock})
+			err := stream.Send(&pb.MessageRequest{Message: reader.Text(), Clock: lampClock})
+			if err != nil {
+				log.Printf("%v", err)
+			}
 		}
 	}
 }
