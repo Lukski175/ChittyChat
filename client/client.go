@@ -5,7 +5,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -20,7 +19,9 @@ func main() {
 	lampClock = 0
 
 	log.Printf("Please input a name...")
-	fmt.Scanln(&clientName)
+	reader := bufio.NewScanner(os.Stdin)
+	reader.Scan()
+	clientName = reader.Text()
 
 	// dial server
 	conn, err := grpc.Dial(":50005", grpc.WithInsecure())
@@ -35,9 +36,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("open stream error %v", err)
 	}
-	stream.Send(&pb.MessageRequest{Message: clientName})
-
-	lampClock++ //First event
+	lampClock++ //Joining is an event
+	stream.Send(&pb.MessageRequest{Message: clientName, Clock: lampClock})
 
 	go SendLoop(stream)
 
@@ -52,6 +52,7 @@ func main() {
 			if resp.Clock > lampClock {
 				lampClock = resp.Clock
 			}
+			lampClock++
 			messages = append(messages, resp)
 			PrintChat()
 		}
@@ -66,7 +67,7 @@ func SendLoop(stream pb.MessageStream_StreamClient) {
 		reader := bufio.NewScanner(os.Stdin)
 		reader.Scan()
 		if reader.Text() != "" {
-			lampClock++
+			lampClock++ //Sending is an event
 			stream.Send(&pb.MessageRequest{Message: reader.Text(), Clock: lampClock})
 		}
 	}

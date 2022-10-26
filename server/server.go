@@ -43,14 +43,16 @@ func (s server) Stream(srv pb.MessageStream_StreamServer) error {
 	resp, err := srv.Recv()
 	if err != nil {
 		log.Fatalf("cannot receive %v", err)
+	} else if resp.Clock > lampClock {
+		lampClock = resp.Clock
 	}
-	clientName := resp.Message
-	lampClock++ //First event
-	message = pb.MessageReply{Message: clientName + " Joined", IsBroadcast: true, Clock: lampClock}
-	go SendMessageToClients(&message)
+	lampClock++
 
+	clientName := resp.Message
+	message = pb.MessageReply{Message: clientName + " Joined", IsBroadcast: true, Clock: lampClock}
 	clientStreams = append(clientStreams, srv)
-	//go SendLoop(srv)
+
+	go SendMessageToClients(&message)
 	go ReceiveLoop(srv, clientName)
 
 	wg.Wait()
@@ -66,7 +68,7 @@ func ReceiveLoop(stream pb.MessageStream_StreamServer, clientName string) {
 		resp, err := stream.Recv()
 
 		if err != nil {
-			lampClock++ //Disconnect is also an event
+			lampClock++ //Disconnect is an event
 			message = pb.MessageReply{Message: clientName + " Disconnected", IsBroadcast: true, Clock: lampClock}
 			go SendMessageToClients(&message)
 			break
@@ -74,6 +76,7 @@ func ReceiveLoop(stream pb.MessageStream_StreamServer, clientName string) {
 			if resp.Clock > lampClock {
 				lampClock = resp.Clock
 			}
+			lampClock++
 			message = pb.MessageReply{Message: resp.Message, Author: clientName, Clock: lampClock}
 			go SendMessageToClients(&message)
 			log.Printf("Resp received: %s", resp.Message)
@@ -83,6 +86,7 @@ func ReceiveLoop(stream pb.MessageStream_StreamServer, clientName string) {
 }
 
 func SendMessageToClients(msg *pb.MessageReply) {
+	lampClock++
 	for _, stream := range clientStreams {
 		stream.Send(msg)
 	}
