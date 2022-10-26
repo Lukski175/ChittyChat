@@ -1,4 +1,20 @@
 syntax = "proto3";
 
 package time;
-option go_package = "https://github.itu.dk/nako/DISYS-week5;time";
+option go_package = "https://github.com/Lukski175/ChittyChat;time";
+
+service MessageStream{
+    rpc Stream(stream MessageRequest) returns (stream MessageReply) {}
+}
+
+message MessageRequest{
+    string message = 1;
+    int32 clock = 2;
+}
+
+message MessageReply{
+    string message = 1;
+    string author = 2;
+    int32 clock = 3;
+    bool isBroadcast = 4;
+}
