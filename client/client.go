@@ -53,6 +53,7 @@ func main() {
 				lampClock = resp.Clock
 			}
 			lampClock++
+			resp.Clock = lampClock
 			messages = append(messages, resp)
 			PrintChat()
 		}

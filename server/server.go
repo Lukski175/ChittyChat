@@ -49,7 +49,7 @@ func (s server) Stream(srv pb.MessageStream_StreamServer) error {
 	lampClock++
 
 	clientName := resp.Message
-	message = pb.MessageReply{Message: clientName + " Joined", IsBroadcast: true, Clock: lampClock}
+	message = pb.MessageReply{Message: clientName + " Joined", IsBroadcast: true}
 	clientStreams = append(clientStreams, srv)
 
 	go SendMessageToClients(&message)
@@ -69,7 +69,7 @@ func ReceiveLoop(stream pb.MessageStream_StreamServer, clientName string) {
 
 		if err != nil {
 			lampClock++ //Disconnect is an event
-			message = pb.MessageReply{Message: clientName + " Disconnected", IsBroadcast: true, Clock: lampClock}
+			message = pb.MessageReply{Message: clientName + " Disconnected", IsBroadcast: true}
 			go SendMessageToClients(&message)
 			break
 		} else {
@@ -77,7 +77,7 @@ func ReceiveLoop(stream pb.MessageStream_StreamServer, clientName string) {
 				lampClock = resp.Clock
 			}
 			lampClock++
-			message = pb.MessageReply{Message: resp.Message, Author: clientName, Clock: lampClock}
+			message = pb.MessageReply{Message: resp.Message, Author: clientName}
 			go SendMessageToClients(&message)
 			log.Printf("Resp received: %s", resp.Message)
 		}
@@ -88,6 +88,7 @@ func ReceiveLoop(stream pb.MessageStream_StreamServer, clientName string) {
 func SendMessageToClients(msg *pb.MessageReply) {
 	lampClock++
 	for _, stream := range clientStreams {
+		msg.Clock = lampClock
 		stream.Send(msg)
 	}
 }
